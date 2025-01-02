@@ -1,0 +1,117 @@
+### Meta-analysis: Dalbavancin vs Standard of Care
+### December 2024
+
+rm(list = ls()) #clear environment
+
+setwd("/Users/u1771937/Desktop/Supervision/SSC2/2024/AnnaGravill") #set working directory
+
+# install and load packages
+list.of.packages <- c("tidyverse","meta","metafor","Cairo","grid")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(tidyverse)
+library(meta)
+library(metafor)
+library(Cairo)
+library(grid)
+
+
+## Comparative cohorts
+
+
+# read in data
+data <- read.csv("data.csv", sep="," , header=T, fill=T, na.string=c(" ","",NA))
+
+# Display the first few rows to inspect
+head(data)
+
+# Convert columns to numeric
+data[, 3:6] <- lapply(data[, 3:6], as.numeric)
+
+## Perform a meta-analysis of dichotomous outcomes using odds ratio
+meta_analysis <- metabin(
+  event.e = data$Events_Exp,
+  n.e = data$Total_Exp,
+  event.c = data$Events_Control,
+  n.c = data$Total_Control,
+  studlab = data$StudyID,
+  sm = "OR",  # Use "OR" for odds ratio; you can change to "RR" for risk ratio
+  method = "MH", # Mantel-Haenszel method
+  comb.fixed = TRUE,
+  comb.random = TRUE,
+  hakn = TRUE
+)
+
+# Display summary of the meta-analysis
+summary(meta_analysis)
+
+# Extract the p-value from the random-effects model
+p_value <- meta_analysis$pval.random
+cat("P-value from random-effects model:", p_value, "\n")
+
+
+# Create the forest plot
+Cairo(file="Forest plot.png", 
+      type="png",
+      units="in",
+      width=12,
+      height=4,
+      pointsize=12,
+      dpi=1200)
+
+forest(meta_analysis,
+       layout = "RevMan5",
+       main = paste("Meta-Analysis (p-value:", round(p_value, 4), ")"),
+       comb.random=T,
+       xlab = "Odds Ratio",
+       label.e = "Dalbavancin",
+       label.c = "Standard",
+       common = F,
+       print.tau2 = F,
+       xlim = c(0.1,4),
+       col.square = "#296d98",col.square.lines="#296d98",col.diamond = "0e2433",col.diamond.lines="0e2433")
+
+dev.off()
+
+# Create a funnel plot to assess publication bias
+funnel(meta_analysis)
+
+
+## Non-comparative cohorts
+
+# read in data
+data <- read.csv("dataie.csv", sep="," , header=T, fill=T, na.string=" ")
+
+## META-ANALYSIS
+
+# method.tau="DL" for DerSimionian-Laird random effects model
+# sm="PFT" for Freeman-Tukey double arcsine transformation (used when there are proportion <0.2 and >0.8 in dataset)
+# method="Inverse" for inverse variance method
+
+studymeta <- metaprop(Cure, Total, studlab=StudyID, sm="PFT", data=data, method="Inverse", method.tau="DL") # Run meta-analysis
+summary(studymeta) # print overall results, for information
+
+# Extract the p-value from the random-effects model
+p_value <- studymeta$pval.random
+cat("P-value from random-effects model:", p_value, "\n")
+
+# Forest plot
+
+Cairo(file="Forest plot IE.png", 
+      type="png",
+      units="in", 
+      width=12, 
+      height=6, 
+      pointsize=12, 
+      dpi=1200)
+
+forest(studymeta, layout="RevMan5", xlab="Proportion", comb.random=T, comb.fixed=F, xlim = c(0,1), 
+       col.square = "#296d98",col.square.lines="#296d98",col.diamond = "0e2433",col.diamond.lines="0e2433",
+       fontsize=11, digits=2,fs.hetstat=9,print.tau2=FALSE,just="right",
+       smlab = "Proportion, Random, 95% CI\n",addrow=T,spacing=1.3,col.random="lightgrey",
+       leftlabs = c("Study\n \n", "Cure","Total","Weight\n","Proportion [95% CI]\n(Random Effects)"),
+       common = F)
+
+dev.off()
+
