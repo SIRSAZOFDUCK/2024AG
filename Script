@@ -3,7 +3,7 @@
 
 rm(list = ls()) #clear environment
 
-setwd("/Users/u1771937/Desktop/Supervision/SSC2/2024/AnnaGravill") #set working directory
+setwd("/Users/u1771937/Desktop/Supervision/SSC2/2024AG") #set working directory
 
 # install and load packages
 list.of.packages <- c("tidyverse","meta","metafor","Cairo","grid")
